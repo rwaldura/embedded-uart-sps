@@ -40,7 +40,7 @@
 // http://www.raspberry-projects.com/pi/programming-in-c/uart-serial-port/using-the-uart
 
 #ifndef SENSIRION_UART_TTYDEV
-#define SENSIRION_UART_TTYDEV "/dev/ttyUSB0"
+#define SENSIRION_UART_TTYDEV "/dev/ttyS5"
 #endif
 
 static int uart_fd = -1;
@@ -70,11 +70,17 @@ int16_t sensirion_uart_open() {
     //    O_NOCTTY - When set and path identifies a terminal device, open()
     //      shall not cause the terminal device to become the controlling
     //      terminal for the process.
+#ifdef DEBUG
+    fprintf(stderr, "Opening UART %s\n", SENSIRION_UART_TTYDEV);
+#endif
     uart_fd = open(SENSIRION_UART_TTYDEV, O_RDWR | O_NOCTTY);
     if (uart_fd == -1) {
         fprintf(stderr, "Error opening UART. Ensure it's not otherwise used\n");
         return -1;
     }
+#ifdef DEBUG
+    fprintf(stderr, "Opened UART! %s\n", SENSIRION_UART_TTYDEV);
+#endif
 
     // see http://pubs.opengroup.org/onlinepubs/007908799/xsh/termios.h.html:
     //    CSIZE:- CS5, CS6, CS7, CS8
@@ -88,12 +94,24 @@ int16_t sensirion_uart_open() {
     //    PARODD - Odd parity (else even)
     struct termios options;
     tcgetattr(uart_fd, &options);
+#ifdef DEBUG
+    fprintf(stderr, "Got UART attr %s\n", SENSIRION_UART_TTYDEV);
+#endif
+
     options.c_cflag = B115200 | CS8 | CLOCAL | CREAD;  // set baud rate
     options.c_iflag = IGNPAR;
     options.c_oflag = 0;
     options.c_lflag = 0;
     tcflush(uart_fd, TCIFLUSH);
+#ifdef DEBUG
+    fprintf(stderr, "Flushed UART %s\n", SENSIRION_UART_TTYDEV);
+#endif
+
     tcsetattr(uart_fd, TCSANOW, &options);
+#ifdef DEBUG
+    fprintf(stderr, "Set UART attr! %s\n", SENSIRION_UART_TTYDEV);
+#endif
+
     return 0;
 }
 
@@ -104,15 +122,28 @@ int16_t sensirion_uart_close() {
 int16_t sensirion_uart_tx(uint16_t data_len, const uint8_t* data) {
     if (uart_fd == -1)
         return -1;
-
-    return write(uart_fd, (void*)data, data_len);
+#ifdef DEBUG
+    fprintf(stderr, "attempting to transmit/write: %d:%x to fd=%d\n", data_len, *data, uart_fd);
+#endif
+    int e = write(uart_fd, (void*)data, data_len);
+#ifdef DEBUG
+    fprintf(stderr, "transmitted/wrote: %d:%x to fd=%d err=%d\n", data_len, *data, uart_fd, e);
+#endif
+    return e;
 }
 
 int16_t sensirion_uart_rx(uint16_t max_data_len, uint8_t* data) {
     if (uart_fd == -1)
         return -1;
 
-    return read(uart_fd, (void*)data, max_data_len);
+#ifdef DEBUG
+    fprintf(stderr, "attempting to receive/read from fd=%d\n", uart_fd);
+#endif
+    int e = read(uart_fd, (void*)data, max_data_len);
+#ifdef DEBUG
+    fprintf(stderr, "received/read: %d:%x from fd=%d\n", e, *data, uart_fd);
+#endif
+    return e;
 }
 void sensirion_sleep_usec(uint32_t useconds) {
     usleep(useconds);

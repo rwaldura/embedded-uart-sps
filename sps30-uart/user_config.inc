@@ -3,7 +3,7 @@
 ## For UART, configure the UART HAL implementation to use.
 ## Use one of the available sample-implementations or implement your own using
 ## the stub.
-# uart_sources = ${sensirion_common_dir}/sensirion_uart_implementation.c
+uart_sources = ${sensirion_common_dir}/sample-implementations/linux/sensirion_uart_implementation.c
 
 ##
 ## The items below are listed as documentation but may not need customization
