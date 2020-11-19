@@ -38,7 +38,9 @@
 #define SPS30_CMD_START_MEASUREMENT 0x00
 #define SPS30_CMD_STOP_MEASUREMENT 0x01
 #define SPS30_SUBCMD_MEASUREMENT_START \
-    { 0x01, 0x03 }
+    { 0x01, 0x03 } 
+    /* 0x03: Big-endian IEEE754 float values 
+       0x05: Big-endian unsigned 16-bit integer values */ 
 #define SPS30_CMD_READ_MEASUREMENT 0x03
 #define SPS30_CMD_SLEEP 0x10
 #define SPS30_CMD_WAKE_UP 0x11

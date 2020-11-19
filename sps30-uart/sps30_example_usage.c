@@ -60,7 +60,7 @@ int main(void) {
 
         fprintf(stderr, "measurements started\n");
 
-        for (int i = 0; i < 6; ++i) {
+        for (int i = 0; i < 5; ++i) {
 
             ret = sps30_read_measurement(&m);
             if (ret < 0) {
@@ -87,7 +87,7 @@ int main(void) {
                        m.nc_1p0, m.nc_2p5, m.nc_4p0, m.nc_10p0,
                        m.typical_particle_size);
             }
-            sensirion_sleep_usec(10000000); /* sleep for 10s */
+            sensirion_sleep_usec(1 * 1000000); /* sleep for 1s */
         }
 
         /* Stop measurement for 1min to preserve power. Also enter sleep mode
