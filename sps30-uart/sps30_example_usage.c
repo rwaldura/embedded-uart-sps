@@ -60,7 +60,7 @@ int main(void) {
 
         fprintf(stderr, "measurements started\n");
 
-        for (int i = 0; i < 60; ++i) {
+        for (int i = 0; i < 6; ++i) {
 
             ret = sps30_read_measurement(&m);
             if (ret < 0) {
@@ -72,22 +72,22 @@ int main(void) {
                         SPS30_GET_ERR_STATE(ret));
                 }
 
-                printf("measured values:\n"
-                       "\t%0.2f pm1.0\n"
-                       "\t%0.2f pm2.5\n"
-                       "\t%0.2f pm4.0\n"
-                       "\t%0.2f pm10.0\n"
-                       "\t%0.2f nc0.5\n"
-                       "\t%0.2f nc1.0\n"
-                       "\t%0.2f nc2.5\n"
-                       "\t%0.2f nc4.5\n"
-                       "\t%0.2f nc10.0\n"
-                       "\t%0.2f typical particle size\n\n",
+                printf(
+                       "%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f\n",
                        m.mc_1p0, m.mc_2p5, m.mc_4p0, m.mc_10p0, m.nc_0p5,
                        m.nc_1p0, m.nc_2p5, m.nc_4p0, m.nc_10p0,
                        m.typical_particle_size);
             }
-            sensirion_sleep_usec(1000000); /* sleep for 1s */
+            sensirion_sleep_usec(10000000); /* sleep for 10s */
         }
 
         /* Stop measurement for 1min to preserve power. Also enter sleep mode
