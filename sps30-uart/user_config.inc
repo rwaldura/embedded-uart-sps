@@ -17,3 +17,4 @@ uart_sources = ${sensirion_common_dir}/sample-implementations/linux/sensirion_ua
 
 ## If you need different CFLAGS, those can be customized as well
 CFLAGS = -Wall -fstrict-aliasing -Wstrict-aliasing=1 -Wsign-conversion -fPIC
+LDLIBS = -lm
