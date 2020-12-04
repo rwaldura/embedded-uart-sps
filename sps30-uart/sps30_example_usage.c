@@ -1,4 +1,9 @@
+/*
+ * Main program: reads sensor every minute, outputs values.
+ */
+
 #include <stdio.h>  // printf
+#include <math.h> // roundf
 
 #include "sensirion_uart.h"
 #include "sps30.h"
@@ -9,8 +14,15 @@
  */
 //#define printf(...)
 
-int main(void) {
-    struct sps30_measurement m;
+int _round(float f) {
+	return (int) roundf(f);
+}
+
+int _roundK(float f) {
+	return (int) roundf(1000 * f); // preserve 3 fractional digits
+}
+
+int main(int argc, const char* argv[]) {
     char serial[SPS30_MAX_SERIAL_LEN];
     const uint8_t AUTO_CLEAN_DAYS = 4;
     int16_t ret;
@@ -62,7 +74,9 @@ int main(void) {
 
         for (int i = 0; i < 60; ++i) {
 
+		    struct sps30_measurement m;
             ret = sps30_read_measurement(&m);
+
             if (ret < 0) {
                 fprintf(stderr, "error reading measurement\n");
             } else {
@@ -73,19 +87,19 @@ int main(void) {
                 }
 
                 printf("measured values:\n"
-                       "\t%0.2f pm1.0\n"
-                       "\t%0.2f pm2.5\n"
-                       "\t%0.2f pm4.0\n"
-                       "\t%0.2f pm10.0\n"
-                       "\t%0.2f nc0.5\n"
-                       "\t%0.2f nc1.0\n"
-                       "\t%0.2f nc2.5\n"
-                       "\t%0.2f nc4.5\n"
-                       "\t%0.2f nc10.0\n"
-                       "\t%0.2f typical particle size\n\n",
-                       m.mc_1p0, m.mc_2p5, m.mc_4p0, m.mc_10p0, m.nc_0p5,
-                       m.nc_1p0, m.nc_2p5, m.nc_4p0, m.nc_10p0,
-                       m.typical_particle_size);
+                       "\t%d pm1.0\n"
+                       "\t%d pm2.5\n"
+                       "\t%d pm4.0\n"
+                       "\t%d pm10.0\n"
+                       "\t%d nc0.5\n"
+                       "\t%d nc1.0\n"
+                       "\t%d nc2.5\n"
+                       "\t%d nc4.5\n"
+                       "\t%d nc10.0\n"
+                       "\t%d typical particle size\n\n",
+                       _round(m.mc_1p0), _round(m.mc_2p5), _round(m.mc_4p0), _round(m.mc_10p0), _round(m.nc_0p5),
+                       _round(m.nc_1p0), _round(m.nc_2p5), _round(m.nc_4p0), _round(m.nc_10p0),
+                       _roundK(m.typical_particle_size));
             }
             sensirion_sleep_usec(1000000); /* sleep for 1s */
         }
