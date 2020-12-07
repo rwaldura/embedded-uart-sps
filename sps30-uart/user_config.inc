@@ -16,4 +16,5 @@ uart_sources = ${sensirion_common_dir}/sample-implementations/linux/sensirion_ua
 # sps30_uart_dir = ${sps_driver_dir}/sps30-uart
 
 ## If you need different CFLAGS, those can be customized as well
-# CFLAGS = -Os -Wall -fstrict-aliasing -Wstrict-aliasing=1 -Wsign-conversion -fPIC
+CFLAGS = -Wall -fstrict-aliasing -Wstrict-aliasing=1 -Wsign-conversion -fPIC
+LDLIBS = -lm
