@@ -22,6 +22,39 @@ int _roundK(float f) {
 	return (int) roundf(1000 * f); // preserve 3 fractional digits
 }
 
+struct sps30_measurement average_measurements(const struct sps30_measurement mm[], const int n) {
+    struct sps30_measurement m = { 0 }; // initialize all fields to zero
+    int valid_measurements = 0;
+
+    for (int i = 0; i < n; i++) {
+        if (mm[i].typical_particle_size > 0) { // valid measurement
+            valid_measurements += 1;
+            m.mc_1p0  += mm[i].mc_1p0;
+            m.mc_2p5  += mm[i].mc_2p5;
+            m.mc_4p0  += mm[i].mc_4p0;
+            m.mc_10p0 += mm[i].mc_10p0;
+            m.nc_0p5  += mm[i].nc_0p5;
+            m.nc_1p0  += mm[i].nc_1p0;
+            m.nc_2p5  += mm[i].nc_2p5;
+            m.nc_4p0  += mm[i].nc_4p0;
+            m.nc_10p0 += mm[i].nc_10p0;
+            m.typical_particle_size += mm[i].typical_particle_size;
+        }
+    }
+
+    m.mc_1p0  /= valid_measurements;
+    m.mc_2p5  /= valid_measurements;
+    m.mc_4p0  /= valid_measurements;
+    m.mc_10p0 /= valid_measurements;
+    m.nc_0p5  /= valid_measurements;
+    m.nc_1p0  /= valid_measurements;
+    m.nc_2p5  /= valid_measurements;
+    m.nc_4p0  /= valid_measurements;
+    m.nc_10p0 /= valid_measurements;
+    m.typical_particle_size /= valid_measurements;
+    return m;
+}
+
 int main(int argc, const char* argv[]) {
     char serial[SPS30_MAX_SERIAL_LEN];
     const uint8_t AUTO_CLEAN_DAYS = 4;
@@ -72,37 +105,69 @@ int main(int argc, const char* argv[]) {
 
         fprintf(stderr, "measurements started\n");
 
-        for (int i = 0; i < 5; ++i) {
+	const int num_samples = 10;
+	struct sps30_measurement mm[num_samples];
 
-	    struct sps30_measurement m;
+	fprintf(stderr, "#"
+                       "\tpm1.0"
+                       "\tpm2.5"
+                       "\tpm4.0"
+                       "\tpm10.0"
+                       "\tnc0.5"
+                       "\tnc1.0"
+                       "\tnc2.5"
+                       "\tnc4.5"
+                       "\tnc10.0"
+                       "\ttps\n");
+
+        for (int i = 0; i < num_samples; ++i) {
+            struct sps30_measurement m;
             ret = sps30_read_measurement(&m);
 
             if (ret < 0) {
-                fprintf(stderr, "error reading measurement\n");
+                fprintf(stderr, "error reading measurement #%d\n", i);
+                mm[i].typical_particle_size = -1;
+            } else if (SPS30_IS_ERR_STATE(ret)) {
+                fprintf(stderr,
+                    "Chip state: %u - measurement #%d may not be accurate\n",
+                    SPS30_GET_ERR_STATE(ret), i);
+                mm[i].typical_particle_size = -1;
             } else {
-                if (SPS30_IS_ERR_STATE(ret)) {
-                    fprintf(stderr,
-                        "Chip state: %u - measurements may not be accurate\n",
-                        SPS30_GET_ERR_STATE(ret));
-                }
-
-                printf("measured values:\n"
-                       "\t%d pm1.0\n"
-                       "\t%d pm2.5\n"
-                       "\t%d pm4.0\n"
-                       "\t%d pm10.0\n"
-                       "\t%d nc0.5\n"
-                       "\t%d nc1.0\n"
-                       "\t%d nc2.5\n"
-                       "\t%d nc4.5\n"
-                       "\t%d nc10.0\n"
-                       "\t%d typical particle size\n\n",
-                       _round(m.mc_1p0), _round(m.mc_2p5), _round(m.mc_4p0), _round(m.mc_10p0), _round(m.nc_0p5),
-                       _round(m.nc_1p0), _round(m.nc_2p5), _round(m.nc_4p0), _round(m.nc_10p0),
-                       _roundK(m.typical_particle_size));
+                fprintf(stderr, "%d"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f"
+                       "\t%0.2f\n",
+                       i, m.mc_1p0, m.mc_2p5, m.mc_4p0, m.mc_10p0, m.nc_0p5,
+                       m.nc_1p0, m.nc_2p5, m.nc_4p0, m.nc_10p0,
+                       m.typical_particle_size);
+		mm[i] = m;
             }
             sensirion_sleep_usec(1 * 1000000); /* sleep for 1s */
         }
+
+	// average out all samples taken
+	struct sps30_measurement m = average_measurements(mm, num_samples);
+        printf(
+               "%d"
+               "\t%d"
+               "\t%d"
+               "\t%d"
+               "\t%d"
+               "\t%d"
+               "\t%d"
+               "\t%d"
+               "\t%d"
+               "\t%d\n",
+               _round(m.mc_1p0), _round(m.mc_2p5), _round(m.mc_4p0), _round(m.mc_10p0), _round(m.nc_0p5),
+               _round(m.nc_1p0), _round(m.nc_2p5), _round(m.nc_4p0), _round(m.nc_10p0),
+               _roundK(m.typical_particle_size));
 
         /* Stop measurement for 1min to preserve power. Also enter sleep mode
          * if the firmware version is >=2.0.
