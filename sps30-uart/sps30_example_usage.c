@@ -2,8 +2,9 @@
  * Main program: reads sensor every minute, outputs values.
  */
 
-#include <stdio.h>  // printf
+#include <stdio.h>
 #include <math.h> // roundf
+#include <time.h>
 
 #include "sensirion_uart.h"
 #include "sps30.h"
@@ -40,6 +41,11 @@ struct sps30_measurement average_measurements(const struct sps30_measurement mm[
             m.nc_10p0 += mm[i].nc_10p0;
             m.typical_particle_size += mm[i].typical_particle_size;
         }
+    }
+
+    if (valid_measurements == 0) {
+        m.typical_particle_size = -1;
+        return m; // return invalid measurement
     }
 
     m.mc_1p0  /= valid_measurements;
@@ -97,10 +103,16 @@ int main(int argc, const char* argv[]) {
     if (ret)
         fprintf(stderr, "error %d setting the auto-clean interval\n", ret);
 
+    /* stdout to be line-buffered: we print measurement data to a pipe.
+     * This is strictly equivalent to: setvbuf(stdout, NULL, _IOLBF, 0) 
+     */
+    setlinebuf(stdout);
+
     while (1) {
         ret = sps30_start_measurement();
         if (ret < 0) {
             fprintf(stderr, "error starting measurement\n");
+	    break;
         }
 
         fprintf(stderr, "measurements started\n");
@@ -125,14 +137,15 @@ int main(int argc, const char* argv[]) {
             ret = sps30_read_measurement(&m);
 
             if (ret < 0) {
-                fprintf(stderr, "error reading measurement #%d\n", i);
                 mm[i].typical_particle_size = -1;
+                fprintf(stderr, "error reading measurement #%d\n", i);
             } else if (SPS30_IS_ERR_STATE(ret)) {
+                mm[i].typical_particle_size = -1;
                 fprintf(stderr,
                     "Chip state: %u - measurement #%d may not be accurate\n",
                     SPS30_GET_ERR_STATE(ret), i);
-                mm[i].typical_particle_size = -1;
             } else {
+		mm[i] = m;
                 fprintf(stderr, "%d"
                        "\t%0.2f"
                        "\t%0.2f"
@@ -147,15 +160,14 @@ int main(int argc, const char* argv[]) {
                        i, m.mc_1p0, m.mc_2p5, m.mc_4p0, m.mc_10p0, m.nc_0p5,
                        m.nc_1p0, m.nc_2p5, m.nc_4p0, m.nc_10p0,
                        m.typical_particle_size);
-		mm[i] = m;
             }
             sensirion_sleep_usec(1 * 1000000); /* sleep for 1s */
         }
 
-	// average out all samples taken
 	struct sps30_measurement m = average_measurements(mm, num_samples);
-        printf(
-               "%d"
+	if (m.typical_particle_size > 0) // valid measurement
+            printf("%ld" 
+               "\t%d"
                "\t%d"
                "\t%d"
                "\t%d"
@@ -165,7 +177,11 @@ int main(int argc, const char* argv[]) {
                "\t%d"
                "\t%d"
                "\t%d\n",
-               _round(m.mc_1p0), _round(m.mc_2p5), _round(m.mc_4p0), _round(m.mc_10p0), _round(m.nc_0p5),
+               time(NULL),
+	       /* Round all measured values; fractional digits do not carry any valid information.
+		* See https://github.com/Sensirion/embedded-uart-sps/issues/77 
+		*/
+	       _round(m.mc_1p0), _round(m.mc_2p5), _round(m.mc_4p0), _round(m.mc_10p0), _round(m.nc_0p5),
                _round(m.nc_1p0), _round(m.nc_2p5), _round(m.nc_4p0), _round(m.nc_10p0),
                _roundK(m.typical_particle_size));
 
@@ -185,7 +201,7 @@ int main(int argc, const char* argv[]) {
         }
 
         fprintf(stderr, "No measurements for 1 minute\n");
-        sensirion_sleep_usec(1000000 * 60);
+        sensirion_sleep_usec(1000000 * 50);
 
         if (version_information.firmware_major >= 2) {
             ret = sps30_wake_up();
