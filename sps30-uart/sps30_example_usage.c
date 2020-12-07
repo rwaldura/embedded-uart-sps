@@ -2,9 +2,9 @@
  * Main program: reads sensor every minute, outputs values.
  */
 
-#include <stdio.h>
-#include <math.h> // roundf
-#include <time.h>
+#include <stdio.h>	// printf
+#include <math.h>	// roundf()
+#include <time.h>	// time()
 
 #include "sensirion_uart.h"
 #include "sps30.h"
@@ -64,6 +64,7 @@ struct sps30_measurement average_measurements(const struct sps30_measurement mm[
 int main(int argc, const char* argv[]) {
     char serial[SPS30_MAX_SERIAL_LEN];
     const uint8_t AUTO_CLEAN_DAYS = 4;
+    const int NUM_SAMPLES = 60;
     int16_t ret;
 
     while (sensirion_uart_open() != 0) {
@@ -117,8 +118,7 @@ int main(int argc, const char* argv[]) {
 
         fprintf(stderr, "measurements started\n");
 
-	const int num_samples = 10;
-	struct sps30_measurement mm[num_samples];
+	struct sps30_measurement mm[NUM_SAMPLES];
 
 	fprintf(stderr, "#"
                        "\tpm1.0"
@@ -132,7 +132,7 @@ int main(int argc, const char* argv[]) {
                        "\tnc10.0"
                        "\ttps\n");
 
-        for (int i = 0; i < num_samples; ++i) {
+        for (int i = 0; i < NUM_SAMPLES; ++i) {
             struct sps30_measurement m;
             ret = sps30_read_measurement(&m);
 
@@ -161,10 +161,10 @@ int main(int argc, const char* argv[]) {
                        m.nc_1p0, m.nc_2p5, m.nc_4p0, m.nc_10p0,
                        m.typical_particle_size);
             }
-            sensirion_sleep_usec(1 * 1000000); /* sleep for 1s */
+            sensirion_sleep_usec(1000000); /* sleep for 1s */
         }
 
-	struct sps30_measurement m = average_measurements(mm, num_samples);
+	struct sps30_measurement m = average_measurements(mm, NUM_SAMPLES);
 	if (m.typical_particle_size > 0) // valid measurement
             printf("%ld" 
                "\t%d"
@@ -201,7 +201,7 @@ int main(int argc, const char* argv[]) {
         }
 
         fprintf(stderr, "No measurements for 1 minute\n");
-        sensirion_sleep_usec(1000000 * 50);
+        sensirion_sleep_usec(1000000 * 60);
 
         if (version_information.firmware_major >= 2) {
             ret = sps30_wake_up();
