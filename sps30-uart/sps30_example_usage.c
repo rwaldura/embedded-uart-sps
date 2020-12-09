@@ -112,7 +112,7 @@ int main(int argc, const char* argv[]) {
     while (1) {
         ret = sps30_start_measurement();
         if (ret < 0) {
-            fprintf(stderr, "error starting measurement\n");
+            sensirion_sleep_usec(1000000); /* sleep for 1s */
             break;
         }
 
